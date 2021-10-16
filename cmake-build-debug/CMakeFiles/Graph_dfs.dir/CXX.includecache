@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/mnt/c/Users/Acer/CLionProjects/Graph_dfs/main.cpp
+iostream
+-
+vector
+-
+unordered_map
+-
+set
+-
+queue
+-
+
