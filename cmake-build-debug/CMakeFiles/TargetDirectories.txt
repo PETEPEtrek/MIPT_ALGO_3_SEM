@@ -1,0 +1,3 @@
+/mnt/c/Users/Acer/CLionProjects/say_no_to_cheating/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/mnt/c/Users/Acer/CLionProjects/say_no_to_cheating/cmake-build-debug/CMakeFiles/edit_cache.dir
+/mnt/c/Users/Acer/CLionProjects/say_no_to_cheating/cmake-build-debug/CMakeFiles/say_no_to_cheating.dir
