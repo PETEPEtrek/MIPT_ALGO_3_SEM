@@ -1,17 +1,16 @@
 #include <iostream>
 #include <vector>
-#include <unordered_map>
-#include <set>
 enum { WHITE = 0, GREEN = 1, RED };
+enum weight{UNWEIGHTED = 1};
 class Graph {
 public:
     typedef size_t Vertex;
-    bool IsDirected = false;
-    mutable bool IsBipart = true;
-    Vertex num_of_edges = 0;
-    Vertex num_of_verteses = 0;
     virtual void Add_Edge(Vertex a, Vertex b) = 0;
-    virtual std::set<Vertex> Get_Neighbors(Vertex v) const = 0;
+    virtual std::vector<Vertex> Get_Neighbors(Vertex v) const = 0;
+    Vertex Get_Num_Of_Verteses() const {
+        return num_of_verteses;
+    }
+    mutable bool IsBipart = true;
     void DFS_Visit(const Graph& graph, std::vector<Vertex>& colors, Vertex v, int32_t color) const {
         colors[v] = color;
         for (auto u: graph.Get_Neighbors(v)) {
@@ -24,35 +23,26 @@ public:
             }
         }
     }
+protected:
+    bool IsDirected = false;
+    int32_t num_of_edges = 0;
+    Vertex num_of_verteses = 0;
 };
 class AdjList : public Graph {
-    std::unordered_map<Vertex, std::set<Vertex>> list_of_adjacency;
-    std::set<Vertex> Get_Neighbors(Vertex v) const override {
-        if (!list_of_adjacency.count(v)) {
-            std::set<Vertex> empty_set = {};
-            return empty_set;
-        }
-        return list_of_adjacency.at(v);
+    std::vector<std::vector<Vertex>> list_of_adjacency;
+    std::vector<Vertex> Get_Neighbors(Vertex v) const override {
+        return list_of_adjacency[v];
     }
 public:
-    AdjList(Vertex verteses, Vertex edges) {
+    AdjList(Vertex verteses, int32_t number_of_edges) {
         num_of_verteses = verteses;
-        num_of_edges = edges;
+        num_of_edges = number_of_edges;
+        list_of_adjacency.resize(num_of_verteses + 1);
     }
     void Add_Edge(Vertex a, Vertex b) override {
-        list_of_adjacency[a].emplace(b);
+        list_of_adjacency[a].push_back(b);
         if (!IsDirected) {
-            list_of_adjacency[b].emplace(a);
-        }
-    }
-    AdjList(Vertex verteses, Vertex edges, std::vector<std::pair<Vertex, Vertex>>& graph) {
-        num_of_verteses = verteses;
-        num_of_edges = edges;
-        for (auto& item: graph) {
-            list_of_adjacency[item.first].emplace(item.second);
-            if (!IsDirected) {
-                list_of_adjacency[item.second].emplace(item.first);
-            }
+            list_of_adjacency[b].push_back(a);
         }
     }
     ~AdjList() = default;
@@ -61,19 +51,19 @@ public:
 
 class AdjMatrix : public Graph {
     std::vector<std::vector<Vertex>> matrix_of_adjacency;
-    std::set<Vertex> Get_Neighbors(Vertex v) const override {
-        std::set<Vertex> neighbors;
+    std::vector<Vertex> Get_Neighbors(Vertex v) const override {
+        std::vector<Vertex> neighbors;
         for (int32_t i = 1; i <= num_of_verteses; ++i) {
             if (matrix_of_adjacency[v - 1][i - 1]) {
-                neighbors.emplace(i);
+                neighbors.push_back(i);
             }
         }
         return neighbors;
     }
 public:
-    AdjMatrix(Vertex verteses, Vertex edges) {
+    AdjMatrix(Vertex verteses, int32_t number_of_edges) {
         num_of_verteses = verteses;
-        num_of_edges = edges;
+        num_of_edges = number_of_edges;
         IsBipart = true;
         matrix_of_adjacency.resize(num_of_verteses);
         for (auto& line: matrix_of_adjacency) {
@@ -81,41 +71,25 @@ public:
         }
     }
     void Add_Edge(Vertex a, Vertex b) override {
-        matrix_of_adjacency[a - 1][b - 1] = 1;
+        matrix_of_adjacency[a - 1][b - 1] = UNWEIGHTED;
         if (!IsDirected) {
-            matrix_of_adjacency[b - 1][a - 1] = 1;
-        }
-    }
-    AdjMatrix(Vertex verteses, Vertex edges, std::vector<std::pair<Vertex, Vertex>>& graph) {
-        num_of_verteses = verteses;
-        num_of_edges = edges;
-        IsBipart = true;
-        matrix_of_adjacency.resize(num_of_verteses);
-        for (auto& line: matrix_of_adjacency) {
-            line.resize(num_of_verteses, 0);
-        }
-        for (auto& item: graph) {
-            matrix_of_adjacency[item.first - 1][item.second - 1] = 1;
-            if (!IsDirected) {
-                matrix_of_adjacency[item.second - 1][item.first - 1] = 1;
-            }
+            matrix_of_adjacency[b - 1][a - 1] = UNWEIGHTED;
         }
     }
     ~AdjMatrix() = default;
 };
 
-void Checking_for_bipartition(const Graph& graph) {
-    std::vector<Graph::Vertex> colors(graph.num_of_verteses + 1, WHITE);
-    for (Graph::Vertex vertex = 1; vertex < graph.num_of_verteses; ++vertex) {
+bool Checking_for_bipartition(const Graph& graph) {
+    std::vector<Graph::Vertex> colors(graph.Get_Num_Of_Verteses() + 1, WHITE);
+    for (Graph::Vertex vertex = 1; vertex < graph.Get_Num_Of_Verteses(); ++vertex) {
         if (colors[vertex] == WHITE) {
             graph.DFS_Visit(graph, colors, vertex, GREEN);
             if (!graph.IsBipart) {
-                std::cout << "NO";
-                return;
+                return false;
             }
         }
     }
-    std::cout << "YES";
+    return true;
 }
 
 int main() {
@@ -127,7 +101,11 @@ int main() {
         std::cin >> first_vertex >> second_vertex;
         graph.Add_Edge(first_vertex, second_vertex);
     }
-    Checking_for_bipartition(graph);
+    if (Checking_for_bipartition(graph)) {
+        std::cout << "YES";
+    } else {
+        std::cout << "NO";
+    }
     return 0;
 }
 
