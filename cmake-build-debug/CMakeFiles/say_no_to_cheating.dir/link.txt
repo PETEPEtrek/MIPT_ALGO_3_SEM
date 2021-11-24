@@ -1,0 +1,1 @@
+/usr/bin/g++  -g   CMakeFiles/say_no_to_cheating.dir/main.cpp.o  -o say_no_to_cheating 

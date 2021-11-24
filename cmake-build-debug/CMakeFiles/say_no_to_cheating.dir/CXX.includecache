@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/mnt/c/Users/Acer/CLionProjects/say_no_to_cheating/main.cpp
+iostream
+-
+vector
+-
+unordered_map
+-
+set
+-
+queue
+-
+
