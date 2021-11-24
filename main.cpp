@@ -2,11 +2,13 @@
 #include <queue>
 #include <set>
 #include <vector>
-enum { INF = 2147483647 };
+#include <algorithm>
+
+enum { ENDOFPARENTS = -1, INF = 2147483647 };
 enum weight { UNWEIGHTED_EDGE = 1 };
 class Graph {
 public:
-    typedef size_t Vertex;
+    typedef int64_t Vertex;
     virtual void Add_Edge(Vertex first_vertex, Vertex second_vertex) = 0;
     virtual std::vector<Vertex> Get_Neighbors(Vertex v) const = 0;
     Vertex Get_Num_Of_Verteses() const {
@@ -44,7 +46,7 @@ class AdjMatrix : public Graph {
     std::vector<Vertex> Get_Neighbors(Vertex v) const override {
         std::vector<Vertex> neighbors;
         for (Vertex i = 1; i <= num_of_verteses; ++i) {
-            if (matrix_of_adjacency[v - 1][i - 1]) {
+            if (matrix_of_adjacency[v][i]) {
                 neighbors.push_back(i);
             }
         }
@@ -61,9 +63,9 @@ public:
         }
     }
     void Add_Edge(Vertex first_vertex, Vertex second_vertex) override {
-        matrix_of_adjacency[first_vertex - 1][second_vertex - 1] = UNWEIGHTED_EDGE;
+        matrix_of_adjacency[first_vertex][second_vertex] = UNWEIGHTED_EDGE;
         if (!IsDirected) {
-            matrix_of_adjacency[second_vertex - 1][first_vertex - 1] = UNWEIGHTED_EDGE;
+            matrix_of_adjacency[second_vertex][first_vertex] = UNWEIGHTED_EDGE;
         }
     }
     ~AdjMatrix() = default;
@@ -71,25 +73,24 @@ public:
 std::vector<Graph::Vertex> Answer_And_Making_Path(std::vector<Graph::Vertex>& parent,
                                                   std::vector<Graph::Vertex>& distance,
                                                   Graph::Vertex to) {
-    std::cout << distance[to] << std::endl;
+    std::cout << distance[to] << std::endl; //Display distance to given element
     std::vector<Graph::Vertex> answer(1, to);
     Graph::Vertex vertex = parent[to];
-    while (vertex != 0) {
+    while (vertex != ENDOFPARENTS) {
         answer.push_back(vertex);
         vertex = parent[vertex];
     }
     return answer;
 }
-std::vector<Graph::Vertex> Shortest_Path_Between_Verteses(const Graph& graph, Graph::Vertex from,
-                                                          Graph::Vertex to) {
-    std::vector<Graph::Vertex> distance(graph.Get_Num_Of_Verteses() + 1, INF);
-    std::vector<Graph::Vertex> parent(graph.Get_Num_Of_Verteses() + 1, 0);
+void BFS(const Graph& graph, std::vector<Graph::Vertex>& parent,
+         std::vector<Graph::Vertex>& distance,
+         Graph::Vertex from) {
     std::queue<Graph::Vertex> queue;
     std::vector<bool> used(graph.Get_Num_Of_Verteses() + 1, false);
     queue.push(from);
     used[from] = true;
     distance[from] = 0;
-    parent[from] = 0;
+    parent[from] = ENDOFPARENTS;
     while (!queue.empty()) {
         Graph::Vertex v = queue.front();
         queue.pop();
@@ -104,6 +105,12 @@ std::vector<Graph::Vertex> Shortest_Path_Between_Verteses(const Graph& graph, Gr
             }
         }
     }
+}
+std::vector<Graph::Vertex> Shortest_Path_Between_Verteses(const Graph& graph, Graph::Vertex from,
+                                                          Graph::Vertex to) {
+    std::vector<Graph::Vertex> distance(graph.Get_Num_Of_Verteses() + 1, INF);
+    std::vector<Graph::Vertex> parent(graph.Get_Num_Of_Verteses() + 1, ENDOFPARENTS);
+    BFS(graph, parent, distance, from);
     if (distance[to] == INF) {
         return {};
     } else {
@@ -118,19 +125,23 @@ int main() {
     AdjList graph(num_of_verteses, num_of_edges);
     Graph::Vertex from, to;
     std::cin >> from >> to;
+    --from;
+    --to;
     for (int32_t i = 0; i < num_of_edges; ++i) {
         Graph::Vertex first_vertex, second_vertex;
         std::cin >> first_vertex >> second_vertex;
+        --first_vertex;
+        --second_vertex;
         graph.Add_Edge(first_vertex, second_vertex);
     }
     std::vector<Graph::Vertex> answer = Shortest_Path_Between_Verteses(graph, from, to);
     if (answer.empty()) {
         std::cout << -1;
     } else {
-        for (size_t i = answer.size() - 1; i > 0; --i) {
-            std::cout << answer[i] << " ";
+        std::reverse(answer.begin(), answer.end());
+        for (const auto& elem: answer) {
+            std::cout << elem + 1 << " ";
         }
-        std::cout << answer[0];
     }
     return 0;
 }
