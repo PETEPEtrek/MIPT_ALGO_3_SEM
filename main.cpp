@@ -1,155 +1,154 @@
 #include <iostream>
 #include <vector>
-#include <unordered_map>
-#include <set>
 #include <queue>
+#include <algorithm>
+
+enum { ENDOFPARENT = -1, INF = INT64_MAX };
+
 struct Point {
     int64_t x = 0;
     int64_t y = 0;
-    Point() {};
-    Point(int64_t x, int64_t y) : x(x), y(y) {}
-    Point operator+(const Point& point) const {
-        Point ans = *this;
-        ans.x += point.x;
-        ans.y += point.y;
-        return ans;
-    }
-    bool operator<(const Point& point) const {
-        return (x < point.x) || (point.x >= x && (y < point.y));
-    }
-    bool operator==(const Point& point) const {
-        return ((x == point.x) && (y == point.y));
-    }
-    bool operator!=(const Point& point) const {
-        return !(*this == point);
-    }
 };
-namespace std {
-template <>
-struct hash<Point> {
-    std::size_t operator()(const Point& point) const {
-        using std::size_t;
-        using std::hash;
-        return ((hash<int64_t>()(point.x) ^ (hash<int64_t>()(point.y) << 1)) >> 1);
-    }
+
+struct Move {
+    std::vector<Point> moves = {{-2, 1}, {-2, -1}, {1, 2}, {-1, 2}};
 };
-}
+
 class Graph {
 public:
-    typedef int64_t Vertex;
-    std::unordered_map<Point, bool> used_cells;
-    virtual void Build_Graph(Point first_vertex) = 0;
-    virtual std::set<Point> Get_Neighbors(Point vertex) const = 0;
+    using Vertex = int64_t;
+    virtual std::vector<Vertex> Get_Neighbors(Vertex vertex) const = 0;
     Vertex Get_Num_Of_Verteses() const {
         return num_of_verteses;
     }
+    virtual void AddEdge(const Vertex& first_vertex, const Vertex& second_vertex) = 0;
 protected:
     bool IsDirected = false;
     int32_t num_of_edges = 0;
     Vertex num_of_verteses = 0;
-    int32_t Desk_size = 0;
 };
 class AdjList : public Graph {
-    std::unordered_map<Point, std::set<Point>> list_of_adjacency;
+    std::vector<std::vector<Vertex>> list_of_adjacency;
 
-    std::set<Point> Get_Neighbors(Point vertex) const override {
-        return list_of_adjacency.at(vertex);
+    std::vector<Vertex> Get_Neighbors(Vertex vertex) const override {
+        return list_of_adjacency[vertex];
     }
 public:
-    AdjList(int32_t desk_size) {
-        num_of_verteses = 1;
+    AdjList(int64_t desk_size) {
+        num_of_verteses = desk_size;
         num_of_edges = 0;
-        Desk_size = desk_size;
+        list_of_adjacency.resize(num_of_verteses);
+        for (Graph::Vertex i = 0; i < num_of_verteses; ++i) {
+            list_of_adjacency[i] = std::vector<Graph::Vertex>();
+        }
     }
-    void Build_Graph(Point first_vertex) override {
-        used_cells[first_vertex] = true;
-        std::vector<Point> moves = {{-2, -1}, {-1, -2}, {-1, 2}, {-2, 1},
-                                    {1, -2}, {2, -1}, {1, 2}, {2, 1}};
-        for (auto& move: moves) {
-            if ((first_vertex + move).x >= 1 && (first_vertex + move).y >= 1 && (first_vertex + move).x <= Desk_size && (first_vertex + move).y <= Desk_size) {
-                ++num_of_edges;
-                list_of_adjacency[first_vertex].emplace(first_vertex + move);
-                if (!IsDirected) {
-                    list_of_adjacency[first_vertex + move].emplace(first_vertex);
-                }
-                if (!used_cells[first_vertex + move]) {
-                    ++num_of_verteses;
-                    Build_Graph(first_vertex + move);
-                }
-            }
+    void AddEdge(const Vertex& first_vertex, const Vertex& second_vertex) {
+        ++num_of_edges;
+        list_of_adjacency[first_vertex].emplace_back(second_vertex);
+        if (!IsDirected) {
+            ++num_of_edges;
+            list_of_adjacency[second_vertex].emplace_back(first_vertex);
         }
     }
     ~AdjList() = default;
 
 };
-std::vector<Point> Answer_And_Making_Path(std::unordered_map<Point, Point>& parent,
-                                          std::unordered_map<Point, int64_t>& distance,
-                                          Point& to) {
-    if (distance[to] == 0) {
-        return {};
-    } else {
-        std::cout << distance[to] << std::endl;
-        std::vector<Point> answer(1, to);
-        Point vertex = parent[to];
-        Point zero{0, 0};
-        while (vertex != zero) {
-            answer.push_back(vertex);
-            vertex = parent[vertex];
-        }
-        return answer;
+class Grid {
+    int64_t size_of_desk;
+
+public:
+    explicit Grid(int64_t size) {
+        size_of_desk = size;
     }
-}
-std::vector<Point> Shortest_Path_Between_Verteses(const Graph& graph, Point& from, Point& to) {
-    std::unordered_map<Point, int64_t> distance(graph.Get_Num_Of_Verteses() + 1);
-    std::unordered_map<Point, Point> parent(graph.Get_Num_Of_Verteses() + 1);
-    std::queue<Point> queue;
-    std::unordered_map<Point, bool> used(graph.Get_Num_Of_Verteses() + 1);
-    queue.push(from);
-    used[from] = true;
-    distance[from] = 0;
-    parent[from] = {0, 0};
-    while (!queue.empty()) {
-        Point v = queue.front();
-        queue.pop();
-        for (auto u: graph.Get_Neighbors(v)) {
-            if (!used[u]) {
-                used[u] = true;
-                if (distance[u] == 0) {
-                    distance[u] = distance[v] + 1;
+    int64_t GetDeskSize() {
+        return size_of_desk;
+    }
+    int64_t DeskToArr(int64_t pos_x, int64_t pos_y) const {
+        return pos_x * size_of_desk + pos_y;
+    }
+    bool Is_In_Desk(int64_t pos_x, int64_t pos_y) const {
+        if (pos_y >= 0 && pos_y < size_of_desk && pos_x >= 0 && pos_x < size_of_desk) {
+            return true;
+        }
+        return false;
+    }
+};
+
+void BuildGraph(Graph& graph, Grid& grid) {
+    Move move;
+    for (Graph::Vertex pos_x = 0; pos_x < grid.GetDeskSize(); ++pos_x) {
+        for (Graph::Vertex pos_y = 0; pos_y < grid.GetDeskSize(); ++pos_y) {
+            for (const auto& option_move: move.moves) {
+                if (grid.Is_In_Desk(pos_x + option_move.x, pos_y + option_move.y)) {
+                    Graph::Vertex first_vertex = grid.DeskToArr(pos_x, pos_y);
+                    Graph::Vertex second_vertex = grid.DeskToArr(pos_x + option_move.x, pos_y + option_move.y);
+                    graph.AddEdge(first_vertex, second_vertex);
                 }
-                parent[u] = v;
-                queue.push(u);
             }
         }
     }
-    return Answer_And_Making_Path(parent, distance, to);
+}
+std::vector<Graph::Vertex> GetAnswerPath(const Graph::Vertex destination, std::vector<Graph::Vertex>& distance,
+                                         std::vector<Graph::Vertex>& parent) {
+    std::vector<Graph::Vertex> answer;
+    if (distance[destination] == INF) {
+        return answer;
+    }
+    Graph::Vertex vertex = destination;
+    while (vertex != ENDOFPARENT) {
+        answer.push_back(vertex);
+        vertex = parent[vertex];
+    }
+    std::reverse(answer.begin(), answer.end());
+    return answer;
+}
+std::vector<Graph::Vertex> ShorthestPathForHorse(const Graph& graph,
+                                                 const Graph::Vertex& from,
+                                                 const Graph::Vertex& to) {
+    std::vector<Graph::Vertex> distance(graph.Get_Num_Of_Verteses(), INF);
+    std::vector<Graph::Vertex> parent(graph.Get_Num_Of_Verteses(), ENDOFPARENT);
+    std::queue<Graph::Vertex> queue;
+    distance[from] = 0;
+    queue.push(from);
+    while (!queue.empty()) {
+        Graph::Vertex vertex = queue.front();
+        queue.pop();
+        for (const auto& neighbor: graph.Get_Neighbors(vertex)) {
+            if (distance[neighbor] == INF) {
+                distance[neighbor] = distance[vertex] + 1;
+                parent[neighbor] = vertex;
+                queue.push(neighbor);
+            }
+        }
+    }
+    return GetAnswerPath(to, distance, parent);
 }
 
-int main() {
-    int32_t Size_of_desk;
-    std::cin >> Size_of_desk;
-    int64_t first_point_x, first_point_y;
-    std::cin >> first_point_x >> first_point_y;
-    Point first(first_point_x, first_point_y);
-    int64_t second_point_x, second_point_y;
-    std::cin >> second_point_x >> second_point_y;
-    Point second(second_point_x, second_point_y);
-    if (first == second) {
-        std::cout << "0" << std::endl;
-        std::cout << first.x << " " << first.y;
-        return 0;
-    }
-    AdjList graph(Size_of_desk);
-    graph.Build_Graph(first);
-    std::vector<Point> answer = Shortest_Path_Between_Verteses(graph, first, second);
+void PrintShortestPath(const std::vector<Graph::Vertex>& answer, Graph::Vertex size_of_desk) {
     if (answer.empty()) {
-        std::cout << "-1";
-    } else {
-        for (size_t i = answer.size() - 1; i > 0; --i) {
-            std::cout << answer[i].x << " " << answer[i].y << std::endl;
-        }
-        std::cout << answer[0].x << " " << answer[0].y;
+        std::cout << -1 << std::endl;
+        return;
     }
+    std::cout << answer.size() - 1 << std::endl;
+    for (auto& vertex: answer) {
+        Graph::Vertex pos_x = vertex / size_of_desk;
+        Graph::Vertex pos_y = vertex % size_of_desk;
+        std::cout << pos_x + 1 << " " << pos_y + 1 << std::endl;
+    }
+}
+int main() {
+    int64_t desk_size;
+    std::cin >> desk_size;
+    AdjList graph(desk_size * desk_size);
+    Grid grid(desk_size);
+    BuildGraph(graph, grid);
+    Point from, to;
+    std::cin >> from.x >> from.y;
+    std::cin >> to.x >> to.y;
+    Graph::Vertex from_pos = grid.DeskToArr(from.x - 1, from.y - 1);
+    Graph::Vertex to_pos = grid.DeskToArr(to.x - 1, to.y - 1);
+    std::vector<Graph::Vertex> answer = ShorthestPathForHorse(graph, from_pos, to_pos);
+    PrintShortestPath(answer, desk_size);
     return 0;
 }
 
