@@ -1,122 +1,154 @@
 #include <iostream>
 #include <vector>
-#include <unordered_map>
-#include <set>
 #include <queue>
+#include <algorithm>
+
+enum { ENDOFPARENT = -1, INF = 10000 };
+
+struct DiffNums {
+    int32_t Shifttoright(int32_t number) {
+        return (number % 10) * 1000 + number / 10;
+    }
+    int32_t Plusfirstdigit(int32_t number) {
+        if (number / 1000 != 9) {
+            return number + 1000;
+        }
+        return number;
+    }
+    int32_t Shifttoleft(int32_t number) {
+        return (number % 1000) * 10 + number / 1000;
+    }
+    int32_t Minusfirstdigit(int32_t number) {
+        if (number % 10 != 1) {
+            return number - 1;
+        }
+        return number;
+    }
+    bool FirstLesserThanNine(int32_t number) {
+        return number / 1000 != 9;
+    }
+
+    bool LastNotOne(int32_t number) {
+        return number % 10 != 1;
+    }
+};
 
 class Graph {
 public:
-    typedef int64_t Vertex;
+    using Vertex = int32_t;
+    virtual std::vector<Vertex> Get_Neighbors(Vertex vertex) const = 0;
     Vertex Get_Num_Of_Verteses() const {
         return num_of_verteses;
     }
-    virtual void Add_Edge(Vertex a) = 0;
-    virtual std::set<Vertex> Get_Neighbors(Vertex v) const = 0;
+    virtual void AddEdge(const Vertex& first_vertex, const Vertex& second_vertex) = 0;
 protected:
-    bool IsDirected = false;
-    Vertex num_of_edges = 0;
+    bool IsDirected = true;
+    int32_t num_of_edges = 0;
     Vertex num_of_verteses = 0;
-    std::unordered_map<Vertex, bool> used_cells;
 };
 class AdjList : public Graph {
-    std::unordered_map<Vertex, std::set<Vertex>> list_of_adjacency;
+    std::vector<std::vector<Vertex>> list_of_adjacency;
 
-    std::set<Vertex> Get_Neighbors(Vertex v) const override {
-        return list_of_adjacency.at(v);
+    std::vector<Vertex> Get_Neighbors(Vertex vertex) const override {
+        return list_of_adjacency[vertex];
     }
 public:
-    AdjList() {
-        num_of_verteses = 1;
+    AdjList(int32_t num_of_vertices) {
+        num_of_verteses = num_of_vertices;
         num_of_edges = 0;
+        list_of_adjacency.resize(num_of_verteses);
+        for (Graph::Vertex i = 0; i < num_of_verteses; ++i) {
+            list_of_adjacency[i] = std::vector<Graph::Vertex>();
+        }
     }
-    void Add_Edge(Vertex number) override {
-        used_cells[number] = true;
-        Vertex
-            first = (number % 10) * 1000 + (number / 1000) * 100 + ((number / 100) % 10) * 10 + ((number % 100) / 10);
-        Vertex
-            second = ((number / 100) % 10) * 1000 + ((number % 100) / 10) * 100 + (number % 10) * 10 + (number / 1000);
-        std::vector<Vertex> moves = {number + 1000, number - 1, first, second};
-        for (auto& move: moves) {
-            if ((move < 10000) && ((move) % 10) && (move >= 1111)) {
-                ++num_of_edges;
-                list_of_adjacency[number].emplace(move);
-                if (!IsDirected && (move - number != 1000) && (number - move != 1)) {
-                    list_of_adjacency[move].emplace(number);
-                }
-                if (!used_cells[move]) {
-                    ++num_of_verteses;
-                    Add_Edge(move);
-                }
-            }
+    void AddEdge(const Vertex& first_vertex, const Vertex& second_vertex) {
+        ++num_of_edges;
+        list_of_adjacency[first_vertex].emplace_back(second_vertex);
+        if (!IsDirected) {
+            ++num_of_edges;
+            list_of_adjacency[second_vertex].emplace_back(first_vertex);
         }
     }
     ~AdjList() = default;
 
 };
-std::vector<Graph::Vertex> Answer_And_Making_Path(std::unordered_map<Graph::Vertex, Graph::Vertex>& parent,
-                                                  std::unordered_map<Graph::Vertex, int64_t>& distance,
-                                                  Graph::Vertex& to) {
-    if (distance[to] == 0) {
-        return {};
-    } else {
-        std::cout << distance[to] + 1 << std::endl;
-        std::vector<Graph::Vertex> answer(1, to);
-        Graph::Vertex vertex = parent[to];
-        Graph::Vertex zero = 0;
-        while (vertex != zero) {
-            answer.push_back(vertex);
-            vertex = parent[vertex];
+
+void BuildGraph(Graph& graph) {
+    DiffNums action{};
+    for (int32_t number = 1000; number < INF; ++number) {
+        std::string number_str = std::to_string(number);
+        if (std::string::npos != number_str.find_first_of('0')) {
+            continue;
         }
-        return answer;
+        Graph::Vertex second_number;
+        if (action.LastNotOne(number)) {
+            second_number = action.Minusfirstdigit(number);
+            graph.AddEdge(number, second_number);
+        }
+        if (action.FirstLesserThanNine(number)) {
+            second_number = action.Plusfirstdigit(number);
+            graph.AddEdge(number, second_number);
+        }
+        second_number = action.Shifttoright(number);
+        graph.AddEdge(number, second_number);
+        second_number = action.Shifttoleft(number);
+        graph.AddEdge(number, second_number);
     }
 }
-std::vector<Graph::Vertex> Shortest_Path_Between_Verteses(const Graph& graph, Graph::Vertex from, Graph::Vertex to) {
-    std::unordered_map<Graph::Vertex, int64_t> distance(graph.Get_Num_Of_Verteses() + 1);
-    std::unordered_map<Graph::Vertex, Graph::Vertex> parent(graph.Get_Num_Of_Verteses() + 1);
+std::vector<Graph::Vertex> GetAnswerPath(const Graph::Vertex destination, std::vector<Graph::Vertex>& distance,
+                                         std::vector<Graph::Vertex>& parent) {
+    std::vector<Graph::Vertex> answer;
+    if (distance[destination] == INF) {
+        return answer;
+    }
+    Graph::Vertex vertex = destination;
+    while (vertex != ENDOFPARENT) {
+        answer.push_back(vertex);
+        vertex = parent[vertex];
+    }
+    std::reverse(answer.begin(), answer.end());
+    return answer;
+}
+std::vector<Graph::Vertex> ShorthestPathForHorse(const Graph& graph,
+                                                 const Graph::Vertex& from,
+                                                 const Graph::Vertex& to) {
+    std::vector<Graph::Vertex> distance(graph.Get_Num_Of_Verteses(), INF);
+    std::vector<Graph::Vertex> parent(graph.Get_Num_Of_Verteses(), ENDOFPARENT);
     std::queue<Graph::Vertex> queue;
-    std::unordered_map<Graph::Vertex, bool> used(graph.Get_Num_Of_Verteses() + 1);
-    queue.push(from);
-    used[from] = true;
     distance[from] = 0;
-    parent[from] = 0;
+    queue.push(from);
     while (!queue.empty()) {
-        Graph::Vertex v = queue.front();
+        Graph::Vertex vertex = queue.front();
         queue.pop();
-        for (auto u: graph.Get_Neighbors(v)) {
-            if (!used[u]) {
-                used[u] = true;
-                if (distance[u] == 0) {
-                    distance[u] = distance[v] + 1;
-                }
-                parent[u] = v;
-                queue.push(u);
+        for (const auto& neighbor: graph.Get_Neighbors(vertex)) {
+            if (distance[neighbor] == INF) {
+                distance[neighbor] = distance[vertex] + 1;
+                parent[neighbor] = vertex;
+                queue.push(neighbor);
             }
         }
     }
-    return Answer_And_Making_Path(parent, distance, to);
+    return GetAnswerPath(to, distance, parent);
 }
 
-int main() {
-    AdjList graph;
-    int32_t first_number;
-    std::cin >> first_number;
-    int32_t second_number;
-    std::cin >> second_number;
-    if (first_number == second_number) {
-        std::cout << "1" << std::endl;
-        std::cout << first_number;
-        return 0;
-    }
-    graph.Add_Edge(first_number);
-    std::vector<Graph::Vertex> answer = Shortest_Path_Between_Verteses(graph, first_number, second_number);
+void PrintShortestPath(const std::vector<Graph::Vertex>& answer) {
     if (answer.empty()) {
-        std::cout << "-1";
-    } else {
-        for (size_t i = answer.size() - 1; i > 0; --i) {
-            std::cout << answer[i] << std::endl;
-        }
-        std::cout << answer[0];
+        std::cout << -1 << std::endl;
+        return;
     }
+    std::cout << answer.size() << std::endl;
+    for (auto& vertex: answer) {
+        std::cout << vertex << std::endl;
+    }
+}
+int main() {
+    AdjList graph(INF);
+    BuildGraph(graph);
+    Graph::Vertex from, to;
+    std::cin >> from;
+    std::cin >> to;
+    std::vector<Graph::Vertex> answer = ShorthestPathForHorse(graph, from, to);
+    PrintShortestPath(answer);
     return 0;
 }
 
