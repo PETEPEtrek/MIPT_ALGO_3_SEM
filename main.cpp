@@ -41,10 +41,17 @@ public:
     ~AdjList() = default;
 
 };
-
+int32_t GetPercent(int32_t pos, int32_t& max_value) {
+    return pos % (max_value + 1);
+}
 int32_t Shortest_weighted_path(Graph& graph, Graph::Vertex& start, Graph::Vertex& end, int32_t& max_value) {
-    std::vector<std::pair<int32_t, std::list<Graph::Vertex>::iterator>> distance(graph.Get_Number_Of_Verteses() + 1);
-    for (int i = 0; i <= graph.Get_Number_Of_Verteses(); i++) {
+    using Edge = std::pair<int32_t, std::list<Graph::Vertex>::iterator>;
+    std::vector<Edge> distance(graph.Get_Number_Of_Verteses() + 1);
+    /**
+     * first elem of Edge points to distance to vertex
+     * second elem of Edge points to iterator to vertex
+     */
+    for (int32_t i = 0; i <= graph.Get_Number_Of_Verteses(); i++) {
         distance[i].first = INF;
     }
     std::vector<bool> used(graph.Get_Number_Of_Verteses() + 1, false);
@@ -53,29 +60,28 @@ int32_t Shortest_weighted_path(Graph& graph, Graph::Vertex& start, Graph::Vertex
     list[0].push_back(start);
     int32_t pos = 0;
     while (1) {
-        while (list[pos % (max_value + 1)].empty() && pos < max_value * graph.Get_Number_Of_Verteses()) {
+        while (list[GetPercent(pos, max_value)].empty() && pos < max_value * graph.Get_Number_Of_Verteses()) {
             ++pos;
         }
         if (pos == max_value * graph.Get_Number_Of_Verteses()) {
             break;
         }
-        Graph::Vertex vertex = list[pos % (max_value + 1)].front();
-        list[pos % (max_value + 1)].pop_front();
+        Graph::Vertex vertex = list[GetPercent(pos, max_value)].front();
+        list[GetPercent(pos, max_value)].pop_front();
         auto list_ex = graph.Get_Neighbors(vertex);
         for (auto& neighbor: list_ex) {
             Graph::Vertex neighbor_vertex = neighbor.first;
             int32_t weight = neighbor.second;
-
-            int32_t du = distance[vertex].first;
-            int32_t dv = distance[neighbor_vertex].first;
-            if (dv > du + weight) {
-                if (dv != INF) {
-                    list[dv % (max_value + 1)].erase(distance[neighbor_vertex].second);
+            int32_t distance_to_vertex = distance[vertex].first;
+            int32_t distance_to_neighbor = distance[neighbor_vertex].first;
+            if (distance_to_neighbor > distance_to_vertex + weight) {
+                if (distance_to_neighbor != INF) {
+                    list[GetPercent(distance_to_neighbor, max_value)].erase(distance[neighbor_vertex].second);
                 }
-                distance[neighbor_vertex].first = du + weight;
-                dv = distance[neighbor_vertex].first;
-                list[dv % (max_value + 1)].push_front(neighbor_vertex);
-                distance[neighbor_vertex].second = list[dv % (max_value + 1)].begin();
+                distance[neighbor_vertex].first = distance_to_vertex + weight;
+                distance_to_neighbor = distance[neighbor_vertex].first;
+                list[GetPercent(distance_to_neighbor, max_value)].push_front(neighbor_vertex);
+                distance[neighbor_vertex].second = list[GetPercent(distance_to_neighbor, max_value)].begin();
             }
         }
     }
@@ -99,11 +105,11 @@ int main() {
         }
         graph.Add_Edge(first_vertex, second_vertex, value);
     }
-    int32_t path = Shortest_weighted_path(graph, from, to, max_value);
-    if (path == INF) {
+    int32_t weight_of_path = Shortest_weighted_path(graph, from, to, max_value);
+    if (weight_of_path == INF) {
         std::cout << "-1";
     } else {
-        std::cout << path;
+        std::cout << weight_of_path;
     }
     return 0;
 }
