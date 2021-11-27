@@ -79,6 +79,15 @@ void dfs(const Graph& graph,
         }
     }
 }
+std::set<Graph::Vertex> GetArticulationPoints(Graph& graph) {
+    std::vector<bool> used(graph.Get_Num_Of_Verteses() + 1, false);
+    std::set<Graph::Vertex> artpoints;
+    std::vector<int32_t> time_up(graph.Get_Num_Of_Verteses() + 1, 0);
+    std::vector<int32_t> time_in(graph.Get_Num_Of_Verteses() + 1, 0);
+    int32_t time = 0;
+    dfs(graph, 1, -1, time, used, artpoints, time_up, time_in);
+    return artpoints;
+}
 int main() {
     std::ios_base::sync_with_stdio(false);
     std::cin.tie(nullptr);
@@ -90,12 +99,7 @@ int main() {
         std::cin >> first_vertex >> second_vertex;
         graph.Add_Edge(first_vertex, second_vertex);
     }
-    std::vector<bool> used(graph.Get_Num_Of_Verteses() + 1, false);
-    std::set<Graph::Vertex> artpoints;
-    std::vector<int32_t> time_up(graph.Get_Num_Of_Verteses() + 1, 0);
-    std::vector<int32_t> time_in(graph.Get_Num_Of_Verteses() + 1, 0);
-    int32_t time = 0;
-    dfs(graph, 1, -1, time, used, artpoints, time_up, time_in);
+    std::set<Graph::Vertex> artpoints = GetArticulationPoints(graph);
     std::cout << artpoints.size() << std::endl;
     for (const auto& artpoint: artpoints) {
         std::cout << artpoint << std::endl;
