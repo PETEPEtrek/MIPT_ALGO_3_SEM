@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <unordered_map>
+#include <algorithm>
 
 class Graph {
 public:
@@ -9,7 +10,6 @@ public:
         return num_of_verteses;
     }
     virtual void Add_Edge(Graph::Vertex a, Graph::Vertex& b) = 0;
-    virtual void Add_Trans_Edge(Graph::Vertex first_vertex, Graph::Vertex& second_vertex) = 0;
     virtual std::vector<Graph::Vertex> Get_Neighbors(Graph::Vertex v) const = 0;
 protected:
     bool IsDirected = true;
@@ -29,9 +29,6 @@ public:
     }
     void Add_Edge(Graph::Vertex first_vertex, Graph::Vertex& second_vertex) override {
             list_of_adjacency[first_vertex].push_back(second_vertex);
-    }
-    void Add_Trans_Edge(Graph::Vertex first_vertex, Graph::Vertex& second_vertex) override {
-            list_of_adjacency[second_vertex].push_back(first_vertex);
     }
     ~AdjList() = default;
 };
@@ -57,21 +54,22 @@ void dfs_visit_for_trans_graph(Graph& trans_graph,
         }
     }
 }
-std::vector<std::vector<Graph::Vertex>> Cosarayu(Graph& graph, Graph& trans_graph) {
+std::vector<std::vector<Graph::Vertex>> GetStrongConnectionComponents(Graph& graph, Graph& trans_graph) {
     std::vector<std::vector<Graph::Vertex>> answer;
     std::vector<bool> used(graph.Get_Num_Of_Verteses() + 1, false);
-    std::vector<Graph::Vertex> order;
+    std::vector<Graph::Vertex> top_order;
     std::vector<Graph::Vertex> components;
     for (int64_t i = 1; i <= graph.Get_Num_Of_Verteses(); ++i) {
         if (!used[i]) {
-            dfs_visit_for_graph(graph, used, i, order);
+            dfs_visit_for_graph(graph, used, i, top_order);
         }
     }
     used.clear();
     used.resize(graph.Get_Num_Of_Verteses() + 1, false);
-    for (int64_t i = 1; i <= graph.Get_Num_Of_Verteses(); ++i) {
-        if (!used[order[graph.Get_Num_Of_Verteses() - i]]) {
-            dfs_visit_for_trans_graph(trans_graph, used, order[graph.Get_Num_Of_Verteses() - i], components);
+    std::reverse(top_order.begin(), top_order.end());
+    for (int64_t i = 0; i < graph.Get_Num_Of_Verteses(); ++i) {
+        if (!used[top_order[i]]) {
+            dfs_visit_for_trans_graph(trans_graph, used, top_order[i], components);
             answer.push_back(components);
             components.clear();
         }
@@ -102,9 +100,9 @@ int main() {
         Graph::Vertex first_vertex, second_vertex;
         std::cin >> first_vertex >> second_vertex;
         graph.Add_Edge(first_vertex, second_vertex);
-        trans_graph.Add_Trans_Edge(first_vertex, second_vertex);
+        trans_graph.Add_Edge(second_vertex, first_vertex);
     }
-    std::vector<std::vector<Graph::Vertex>> answer = Cosarayu(graph, trans_graph);
+    std::vector<std::vector<Graph::Vertex>> answer = GetStrongConnectionComponents(graph, trans_graph);
     Answer(graph, answer);
     return 0;
 }
